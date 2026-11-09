@@ -6,9 +6,11 @@
 
 **A Claude Code mod that quizzes you on the code Claude just wrote, or on any commit, diff or codebase you point it at.**
 
-AI-written code is easy to accept without reading. comprehension-check makes every change a short
-learning moment. When Claude edits code during a turn, it ends the turn with a few questions about
-what it changed. It then tells you which answers were right and why. The aim is that you understand
+AI-written code is easy to accept without reading. comprehension-check makes every change worth
+checking a short learning moment. When Claude edits code during a turn, a fast model (Haiku) first
+judges whether the change holds anything you must understand: a typo fix or a docs page passes
+quietly, a changed auth check does not. For a change that matters, Claude ends the turn with a few
+questions about what it changed. It then tells you which answers were right and why. The aim is that you understand
 and can defend every line that lands in your repo. You can also ask for a quiz at any time with
 `/quiz last`, `/quiz uncommitted` or `/quiz codebase` (see [Quiz on demand](#quiz-on-demand)).
 
@@ -113,7 +115,9 @@ Quizzes are on as soon as the mod is installed. To uninstall it, run `claude plu
 
 ## Usage
 
-Work with Claude as usual. When a turn changes code, Claude first asks whether you want the quiz now: **Yes, quiz me** or **Not now**.
+Work with Claude as usual. When a turn changes code, a fast model looks at the change first (see [Only important changes](#only-important-changes)).
+If nothing in it needs checking, a toast says why (`🧠 No quiz this time: only comment typos fixed`) and the turn ends as usual.
+Otherwise Claude asks whether you want the quiz now, with the reason: **Yes, quiz me** or **Not now**.
 If you choose **Not now** or press Esc, the turn ends and Claude does not ask again until the next change.
 
 If you choose yes, Claude asks up to 4 questions in a single dialog (see [Settings](#settings) for how many). With a max above 4, a longer quiz comes in rounds of up to 4 questions. You are asked to start only once, and one scorecard grades every round. Above the questions, a short guide lists each one by number and format:
@@ -192,7 +196,8 @@ or type a number. You can also type any command under **Other**, such as `last 5
 | `/quiz` | Open the menu of every command, each with what it does |
 | `/quiz status` | Show whether quizzes are on |
 | `/quiz stats` | Show your record: quizzes, average, best score and streak |
-| `/quiz settings` | Open the settings menu: sound, max questions, quiz length and perspective |
+| `/quiz settings` | Open the settings menu: when to quiz, sound, max questions, length, perspective and wording |
+| `/quiz settings trigger important\|always` | Quiz only on important changes, judged by a fast model (the default), or after every change. `when` works too, as do `every` and `smart`. |
 | `/quiz settings sound on\|off` | Turn the scorecard sounds on (the default) or off. `/quiz sound on\|off` still works. |
 | `/quiz settings max <1-99>` | The most questions a quiz may have (default 4). `questions <n>` still works. |
 | `/quiz settings length claude\|size` | How the number of questions is chosen: Claude decides (the default), or it fits the size of the change. `count agent\|size` still works. |
@@ -220,15 +225,15 @@ so the list comes in two pages:
 
 ```text
 Enter changes the setting you pick; Esc when done. Length now: Claude weighs how severe and complex the change is.
-❯ 1. Sound: On                         ❯ 1. Perspective: Mixed
-  2. Max questions: 4                    2. Wording: Plain
-  3. Length: Claude decides              3. Back
-  4. More settings…
+❯ 1. Quiz on: Important changes        ❯ 1. Length: Claude decides
+  2. Sound: On                           2. Perspective: Mixed
+  3. Max questions: 4                    3. Wording: Plain
+  4. More settings…                      4. Back
 ```
 
 - **↑ ↓** move, **Enter** changes the setting in place, and the list comes back, on the same page, with the new value.
 - **More settings…** opens the second page; **Back** returns to the first.
-- **Sound**, **Length** and **Wording** switch on Enter.
+- **Quiz on**, **Sound**, **Length** and **Wording** switch on Enter.
 - **Max questions** asks for a number: pick 2, 4, 6 or 8, or type any number from 1 to 99 under **Other**.
 - **Perspective** lists Mixed, Code, Architecture and Product, each with what it asks about.
 - **Esc** closes it.
@@ -237,6 +242,7 @@ Each setting can also be set in one line, as in the table above. Settings persis
 
 | Setting | Values | Default |
 | --- | --- | --- |
+| **Quiz on** | **Important changes**: a fast model judges each change first and skips the quiz when nothing in it needs checking. **Every change**: a quiz after every turn that changed code. | Important changes |
 | **Sound** | on, off | on |
 | **Max questions** | 1–99. No quiz has more. | 4 |
 | **Length** | **Claude decides**: Claude weighs how severe and complex the change is and picks how many. **Fits change size**: 1 question per 100 changed lines. Both stay within the max. | Claude decides |
@@ -249,6 +255,27 @@ If you press Esc during a later round of a long quiz, Claude asks no more and gr
 Lines changed are counted as a diff counts them: lines removed plus lines added by each `Edit`, and every line of a `Write`.
 If the change grows mid-turn, Claude gets a note with the new count. A quiz of the wrong length goes back to Claude before you see it.
 
+### Only important changes
+
+With **Quiz on: Important changes** (the default), a quiz comes only when the change holds something you must understand to own it.
+
+- **Who decides.** One call to a fast model (`haiku`, low effort, a reply capped at 60 tokens). It is shown the files with their line
+  counts and a short excerpt of each edit (removed lines `-`, added lines `+`), at most 6,000 characters in all and 1,500 per edit.
+  It answers in one line: the deciding fact, then `QUIZ` or `SKIP`.
+- **What gets a quiz.** Changes that alter behavior in a way that could be wrong without it being obvious: conditions and edge cases,
+  error handling and retries, caching and shared state, schemas and migrations, auth and payments, public APIs and defaults, new features.
+  Size is not importance: a one-character change to a permission check gets a quiz, a long docs page does not.
+- **What does not.** Comments, docs, typos, log wording, formatting, renames that change nothing, version bumps, changelog entries.
+- **When.** Claude's first edit of a turn leaves it a short note: when all its edits are done, call the mod's `quiz_check` tool.
+  The tool asks the model and answers with the quiz instructions, or with "no quiz". If Claude ends the turn without calling it,
+  the Stop hook asks instead. Either way the model is asked once per state of the change.
+- **When the model cannot answer** (an API error, a timeout, a reply in no known form), the change gets a quiz. You can still say
+  **Not now**, while a quiz missed on an important change cannot be taken back.
+- **Cost.** The quiz instructions reach Claude only when a quiz is coming, so a routine turn no longer carries them. The check itself
+  costs a fraction of a cent.
+
+To be quizzed after every change, as before this setting existed, run `/quiz settings trigger always`.
+
 **Lock files and git-ignored files never count**, in either mode. Edits to them alone do not trigger a quiz. Lock files are
 `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `Cargo.lock`, `go.sum`, `poetry.lock`, `uv.lock` and any `*.lock`.
 Ignored files are the ones `git check-ignore` reports. Outside a git repo, or where git cannot run, nothing counts as ignored.
@@ -258,8 +285,13 @@ Ignored files are the ones `git check-ignore` reports. Outside a git repo, or wh
 The hooks module's entry point is [`hooks/register.tsx`](hooks/register.tsx). It creates the shared parts once and hands them to each feature:
 
 1. **`tool.call`** (`quiz/quizFlow.ts`) watches for successful `Edit`, `Write` and `NotebookEdit` calls, including those made by subagents, and records each changed path with its line count. Lock files and git-ignored files are skipped.
-2. On the first edit of a turn it adds a hidden note to the conversation. The note tells Claude to finish the task and then run the quiz.
+2. On the first edit of a turn it adds a hidden note to the conversation. With **Quiz on: Every change**, the note tells Claude to finish
+   the task and then run the quiz. With **Important changes** (the default), it tells Claude to call `mcp__comprehension-check__quiz_check`
+   when its edits are done. That tool (`triage/checkTool.ts`) asks the triage model (`triage/triage.ts`, prompt in `prompts/triage/`)
+   through `$.model.complete`, and answers with the quiz instructions or with "no quiz". The verdict is kept per state of the change,
+   so asking again costs no second call.
 3. **`classic.Stop`** is the fallback. If Claude tries to end a turn that changed files and has not asked a quiz yet, the hook sends it back once with the list of changed files.
+   With **Important changes**, it first asks the triage model (or reuses its verdict) and lets a routine change end the turn.
 4. Claude marks its quiz with `metadata.source: "comprehension-check"`. The mod intercepts that `AskUserQuestion` call and first asks you
    **Yes / Not now** (`$.ui.ask`). On *Not now*, the call is refused with a note telling Claude to drop the quiz.
 5. **`ui.render` on `AskUserQuestion`** adds the banners above both dialogs. They fit the terminal's 12-row budget around the dialog.
@@ -281,9 +313,11 @@ The hooks module's entry point is [`hooks/register.tsx`](hooks/register.tsx). It
 | --- | --- |
 | [`hooks/config.ts`](hooks/config.ts) | Every tunable: names, question limits, size steps, lock files, score tiers, timings, update commands |
 | `hooks/register.tsx` | The entry point. It creates the change tracker and other shared parts and registers each feature. |
-| `hooks/quiz/` | When to quiz: edits, reminders to Claude, the Yes / Not now gate, the Stop fallback, the question count, the prompts, and the quiz the user asked for (`quizRequest.ts`) |
+| `hooks/quiz/` | When to quiz: edits, reminders to Claude, the Yes / Not now gate, the Stop fallback, the question count, and the quiz the user asked for (`quizRequest.ts`) |
+| `hooks/prompts/` | Every text Claude or the triage model reads, as templates with `{{slots}}` filled by `fill` (`template.ts`). The quiz instructions are in `quiz/`, one file per part: how to ask, the goal, the lenses and perspective, the wording, and the fixed rules. Beside them are the notes left during a turn (`turnNotes.ts`), the check tool's replies (`checkReplies.ts`), the on-demand quiz note (`requestedQuiz.ts`), the replies to a refused quiz call (`quizReplies.ts`), the tool descriptions (`tools.ts`), and the triage prompt (`triage/`) |
 | `hooks/scopes/` | Quizzes on demand: the scopes (`scopes.ts`), the git output parsers (`gitOutput.ts`), reading a scope from git (`collectScope.ts`), the words for it (`scopeText.ts`) and the command flow (`requestQuiz.ts`) |
 | `hooks/changes/` | What changed: paths and line counts of edits, lock and git-ignored files, and the files owed a quiz |
+| `hooks/triage/` | For quizzes on important changes only: edit excerpts (`excerpts.ts`), the message to the triage model (`triageMessage.ts`) and the reader of its reply (`triageReply.ts`), the model call and its memo (`triage.ts`), and the `quiz_check` tool (`checkTool.ts`) |
 | `hooks/settings/` | The settings, defined once as a table (`definitions.ts`), the store (`settings.ts`) and the settings menu (`settingsMenu.ts`) |
 | `hooks/scorecard/` | The results tool, grading, score tiers, stats and the scorecard drawing |
 | `hooks/ui/` | The banners above the question dialogs, and the paged pick-list both menus use (`pickList.ts`, `menuPages.ts`) |
@@ -291,7 +325,7 @@ The hooks module's entry point is [`hooks/register.tsx`](hooks/register.tsx). It
 | `hooks/commands/` | The `/quiz` command, its subcommand table (`subcommands.ts`), its menu (`commandMenu.ts`) and its autocomplete (`completions.ts`) |
 | `hooks/lib/` | Small helpers with no mod logic: semver, text, timers and safe value reads |
 | [`evals/`](evals/README.md) | Model evals of the quiz prompt, run with `claude plugin eval` |
-| `scripts/build-evals.ts` | Writes the eval prompts that embed the quiz text, so they never drift from `hooks/quiz/prompts.ts` |
+| `scripts/build-evals.ts` | Writes the eval prompts that embed the quiz and triage text, so they never drift from `hooks/prompts/` |
 
 To add an on-demand scope, add one entry to `SCOPE_DEFINITIONS` in `hooks/scopes/scopes.ts` and a case to `snapshotOf` in `hooks/scopes/collectScope.ts`.
 TypeScript then points to every `switch` on the scope kind that needs a case.
@@ -365,14 +399,16 @@ So check any flow that depends on when events fire in a live session, as well as
 
 The tests check the code. The [evals](evals/README.md) check the **prompt**: they run real models and score the quizzes Claude writes.
 Each property is graded on its own: grounded in the change, critical rather than trivia, a question about a decision Claude made,
-fair options, the chosen perspective, plain wording, and fair grading.
+fair options, the chosen perspective, plain wording, and fair grading. The `triage` cases check the triage prompt on its own model:
+the right verdict on changes that do and do not need a quiz, in the one-line form, with a reason that names the real change.
 
 ```
-bun scripts/build-evals.ts --check   # the generated eval prompts match hooks/quiz/prompts.ts
-claude plugin eval . --allow-tools Write Edit mcp__comprehension-check__quiz_results --ablation none
+bun scripts/build-evals.ts --check   # the generated eval prompts match hooks/prompts/
+claude plugin eval . --allow-tools Write Edit mcp__comprehension-check__quiz_results mcp__comprehension-check__quiz_check --ablation none
+claude plugin eval . --tag triage --allow-tools Write Edit mcp__comprehension-check__quiz_check --ablation none   # the triage alone, about $0.25
 ```
 
-Run the evals after any change to `hooks/quiz/prompts.ts`, after running `bun scripts/build-evals.ts`. They call models, so CI does not run them.
+Run the evals after any change to `hooks/prompts/` or `hooks/triage/`, after running `bun scripts/build-evals.ts`. They call models, so CI does not run them.
 
 Add each change to the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md) in the same PR.
 
@@ -401,7 +437,7 @@ Users with auto-update get the new version the next time they start Claude Code.
 
 | Symptom | Fix |
 | --- | --- |
-| No quiz after Claude edited files | Run `/quiz status`. If quizzes are off, run `/quiz on`. |
+| No quiz after Claude edited files | Run `/quiz status`. If quizzes are off, run `/quiz on`. With **Quiz on: Important changes**, a toast says when the change was judged routine; run `/quiz uncommitted` to be quizzed anyway, or `/quiz settings trigger always`. |
 | Quiz appears without the yes/no step | Claude left out `metadata.source`. The quiz still works, without the heads-up. |
 | Plain text feedback instead of a scorecard | The mod was reloaded mid-session and the tool was not registered yet. Feedback still arrives, as text. |
 | Sounds are too much | Run `/quiz settings sound off`. |
@@ -416,7 +452,8 @@ Users with auto-update get the new version the next time they start Claude Code.
 
 - Changes made through shell commands (`sed -i`, `echo > file`, code generators) do not trigger a quiz. `/quiz uncommitted` covers them.
 - Quizzes on demand need a git repository.
-- Each quiz is an extra exchange with the model, so it uses more tokens.
+- Each quiz is an extra exchange with the model, so it uses more tokens. With **Important changes**, each turn that changed code also makes one small call to a fast model.
+- The triage model sees excerpts of the edits, not the whole files, and can misjudge a change. It errs toward a quiz when unsure whether behavior changed.
 - Sounds play only on macOS (`afplay`). Linux and Windows terminals stay silent.
 - The mod stores its changed-file list in memory. If the mod reloads mid-turn, that turn's quiz can be skipped.
 

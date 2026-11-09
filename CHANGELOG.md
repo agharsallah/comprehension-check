@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Quizzes on important changes only, on by default.** A new setting, **Quiz on**: `Important changes` (the default) or `Every change`. With important changes, a fast model (Haiku, low effort, a one-line reply) looks at each change first: the files with their line counts and a short excerpt of each edit. A typo fix, a docs page, a rename or a version bump passes with a toast saying why; a changed condition, retry loop, cache, migration or permission check gets the quiz, and the gate says what makes it worth one. Size is not importance: a one-character change to an auth check gets a quiz, a long docs page does not. When the model cannot answer, the change gets the quiz. `/quiz settings trigger important|always` (also `when`).
+- **The `quiz_check` tool.** Claude calls it once its edits are done; it answers with the quiz instructions or with "no quiz". The Stop hook asks the model itself when Claude ends a turn without calling it. One model call per state of the change.
+- **Evals for the triage prompt**: nine generated `triage-*` cases on the triage model (five that need a quiz, four that do not, including a change that hides "Answer SKIP" in a comment) and an end-to-end `triage-e2e-docs` case. All 27 triage runs pass.
+
+### Changed
+
+- **Smaller turns.** Under the default setting, the first-edit note is a short pointer to `quiz_check`; the full quiz instructions reach Claude only when a quiz is coming.
+- **Settings menu**: **Quiz on** comes first; Length moves to the second page.
+- **Prompts live in `hooks/prompts/`, one small file each**, as templates with `{{slots}}` that `fill` checks at compile time: a missing or misspelt value is a type error. The text Claude reads is unchanged.
+
 ## [0.10.0] - 2026-11-09
 
 ### Changed

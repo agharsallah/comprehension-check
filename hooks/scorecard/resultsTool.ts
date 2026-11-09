@@ -5,6 +5,7 @@ import type { EngineInterface, On } from 'claude-code'
 
 import { RESULTS_TOOL, RESULTS_TOOL_NAME } from '../config'
 import { pickStable } from '../lib/text'
+import { RESULTS_TOOL_DESCRIPTION, resultsRefusedReply, scorecardShownReply } from '../prompts/tools'
 import type { QuizRounds } from '../quiz/quizRounds'
 import { readSettings } from '../settings/settings'
 import { RESULTS_SCHEMA, parseResults, scoreOf, tierFor } from './grading'
@@ -17,8 +18,7 @@ export const RESULTS_TOOL_MATCH = new RegExp(`^${RESULTS_TOOL}$`)
 export async function defineResultsTool($: EngineInterface) {
   await $.tool.register({
     name: RESULTS_TOOL_NAME,
-    description:
-      'Show the user a scorecard for the comprehension quiz you just graded. Call once, right after the user answers the quiz questions.',
+    description: RESULTS_TOOL_DESCRIPTION,
     inputSchema: RESULTS_SCHEMA,
     isDeferred: false,
   })
@@ -30,9 +30,7 @@ export function registerResultsTool(on: On, rounds: QuizRounds) {
 
   on('tool.call', { tool: RESULTS_TOOL_MATCH }, async ($, e) => {
     const parsed = parseResults(e)
-    if (parsed === undefined) {
-      return { deny: `${RESULTS_TOOL_NAME} needs a non-empty "results" array with a valid verdict on each item.` }
-    }
+    if (parsed === undefined) return { deny: resultsRefusedReply }
     // Graded: the next quiz call starts a new quiz.
     rounds.end()
     const { points, pct } = scoreOf(parsed.results)
@@ -48,8 +46,6 @@ export function registerResultsTool(on: On, rounds: QuizRounds) {
       void $.audio.play({ asset: tier.sound }).catch(() => undefined)
     }
 
-    return {
-      result: `Scorecard shown to the user: ${pct}% (${points}/${parsed.results.length}). It already shows every verdict, punchline and explanation, so do not repeat them. Close with at most one short line.`,
-    }
+    return { result: scorecardShownReply(pct, points, parsed.results.length) }
   })
 }

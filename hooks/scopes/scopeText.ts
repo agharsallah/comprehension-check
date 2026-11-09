@@ -1,12 +1,12 @@
 // The words for an on-demand quiz: what Claude is told the quiz is about
-// (a QuizSubject for quiz/prompts.ts) and the line the user sees when the
-// command runs. Pure.
+// (a QuizSubject for prompts/requestedQuiz.ts) and the line the user sees
+// when the command runs. Pure.
 
 import { ON_DEMAND } from '../config'
 import { largestFirst } from '../changes/changeSets'
 import { totalLines } from '../changes/changeTracker'
 import { plural } from '../lib/text'
-import type { QuizSubject } from '../quiz/prompts'
+import type { QuizSubject } from '../prompts/requestedQuiz'
 import type { QuestionCount } from '../quiz/questionCount'
 import { findSetting } from '../settings/definitions'
 import type { Settings } from '../settings/settings'

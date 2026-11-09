@@ -35,19 +35,29 @@ const engine = (on: On, answers: string[]) => {
 const START = { cwd: '/repo', surface: 'terminal', isInteractive: true } as const
 
 test('Enter on Sound or Length changes it in place, and the list comes back', async ($, on) => {
-  const asked = engine(on, ['Sound: On', 'Length: Claude decides', 'Done'])
+  const asked = engine(on, ['Sound: On', 'More settings…', 'Length: Claude decides', 'Done'])
   await $.session.start(START)
 
   const r = await $.command.run(quiz('settings'))
   expect(r.text).toContain(
-    'Saved. Quiz settings: sound off · at most 4 questions · length fits the change size · mixed perspective · plain wording.',
+    'Saved. Quiz settings: quiz on important changes · sound off · at most 4 questions · length fits the change size · mixed perspective · plain wording.',
   )
 
-  expect(asked.map(a => a.header)).toEqual(['Settings', 'Settings', 'Settings'])
-  expect(asked[0]?.options).toEqual(['Sound: On', 'Max questions: 4', 'Length: Claude decides', 'More settings…'])
-  expect(asked[1]?.options[0]).toBe('Sound: Off')
+  expect(asked.map(a => a.header)).toEqual(['Settings', 'Settings', 'Settings', 'Settings'])
+  expect(asked[0]?.options).toEqual(['Quiz on: Important changes', 'Sound: On', 'Max questions: 4', 'More settings…'])
+  expect(asked[1]?.options[1]).toBe('Sound: Off')
   expect(asked[0]?.question).toContain('Claude weighs how severe and complex the change is')
-  expect(asked[2]?.question).toContain('1 question per 100 changed lines')
+  expect(asked[3]?.question).toContain('1 question per 100 changed lines')
+})
+
+test('Enter on Quiz on switches between important changes and every change', async ($, on) => {
+  const asked = engine(on, ['Quiz on: Important changes', 'Quiz on: Every change', 'Done'])
+  await $.session.start(START)
+
+  const r = await $.command.run(quiz('settings'))
+  expect(asked[1]?.options[0]).toBe('Quiz on: Every change')
+  expect(asked[2]?.options[0]).toBe('Quiz on: Important changes')
+  expect(r.text).toContain('quiz on important changes')
 })
 
 test('Max questions: pick a number, or type one under Other', async ($, on) => {
@@ -70,7 +80,7 @@ test('Perspective lists every lens with what it asks, the current one marked', a
   expect(asked[2]?.options).toEqual(['Mixed (current)', 'Code', 'Architecture', 'Product'])
   expect(asked[2]?.question).toContain('Product: What it means for users')
   // After a change the list comes back on the same page.
-  expect(asked[3]?.options[0]).toBe('Perspective: Product')
+  expect(asked[3]?.options[1]).toBe('Perspective: Product')
   expect(asked[4]?.options).toContain('Product (current)')
 })
 
@@ -100,15 +110,15 @@ test('the settings dialogs do not count as a quiz', async ($, on) => {
   expect(r.block).toContain('/repo/owed.kt')
 })
 
-test('More settings… opens the second page: Perspective, Wording and Back', async ($, on) => {
+test('More settings… opens the second page: Length, Perspective, Wording and Back', async ($, on) => {
   const asked = engine(on, ['More settings…', 'Wording: Plain', 'Back', 'Done'])
   await $.session.start(START)
 
   const r = await $.command.run(quiz('settings'))
   expect(r.text).toContain('standard wording')
-  expect(asked[1]?.options).toEqual(['Perspective: Mixed', 'Wording: Plain', 'Back'])
+  expect(asked[1]?.options).toEqual(['Length: Claude decides', 'Perspective: Mixed', 'Wording: Plain', 'Back'])
   // Enter switched the wording in place, on the same page.
-  expect(asked[2]?.options).toEqual(['Perspective: Mixed', 'Wording: Standard', 'Back'])
+  expect(asked[2]?.options).toEqual(['Length: Claude decides', 'Perspective: Mixed', 'Wording: Standard', 'Back'])
   // Back returns to the first page.
   expect(asked[3]?.options[3]).toBe('More settings…')
 })

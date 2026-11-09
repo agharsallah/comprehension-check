@@ -1,0 +1,2 @@
+// What the quiz is for. Every rule after it serves this.
+export const QUIZ_GOAL = `The goal is the user's critical thinking, not their memory. Code an agent wrote is easy to accept without reading it; the quiz checks that the user still owns this change: they can explain what it does, defend it to whoever will maintain it, and say what it does not cover. Ask what a sharp reviewer would ask before approving it.`

@@ -15,7 +15,7 @@ import type { CommandRunResult, EngineInterface } from 'claude-code'
 
 import { ON_DEMAND, PLUGIN_NAME } from '../config'
 import { delay } from '../lib/timers'
-import { requestedQuizNote } from '../quiz/prompts'
+import { requestedQuizNote } from '../prompts/requestedQuiz'
 import { questionCountFor } from '../quiz/questionCount'
 import type { QuizRequest } from '../quiz/quizRequest'
 import { readSettings } from '../settings/settings'

@@ -4,6 +4,7 @@
 //   quiz/        when to quiz: edits, reminders, the yes/no gate, the Stop fallback
 //   scopes/      quizzes on demand: the last commits, uncommitted changes, the codebase
 //   changes/     what changed: files, line counts, lock and git-ignored files
+//   triage/      for important changes only: a fast model judges each change
 //   settings/    the user's settings and the settings menu
 //   scorecard/   the results tool, grading, stats and the scorecard drawing
 //   ui/          the banners above the question dialogs
@@ -24,6 +25,8 @@ import { QuizRounds } from './quiz/quizRounds'
 import { TurnReminders } from './quiz/turnReminders'
 import { defineResultsTool, registerResultsTool } from './scorecard/resultsTool'
 import { registerScorecardView } from './scorecard/scorecardView'
+import { defineCheckTool, registerCheckTool } from './triage/checkTool'
+import { TriageMemo } from './triage/triage'
 import { registerDialogBanners } from './ui/dialogBanners'
 
 export const register: Register = on => {
@@ -31,16 +34,19 @@ export const register: Register = on => {
   const rounds = new QuizRounds()
   const ownDialogs = createOwnDialogs()
   const request = new QuizRequest()
+  const memo = new TriageMemo()
 
   on('session.start', async ($, e, next) => {
     await defineQuizCommand($)
     await defineResultsTool($)
+    await defineCheckTool($)
     return next(e)
   })
 
   registerQuizCommand(on, { changes, ownDialogs, request })
   registerQuizCompletions(on)
   registerResultsTool(on, rounds)
+  registerCheckTool(on, { changes, memo })
   registerQuizFlow(on, {
     changes,
     reminders: new TurnReminders(),
@@ -48,6 +54,7 @@ export const register: Register = on => {
     ownDialogs,
     ignoredFiles: new IgnoredFileCache(),
     request,
+    memo,
   })
   registerScorecardView(on)
   registerDialogBanners(on)

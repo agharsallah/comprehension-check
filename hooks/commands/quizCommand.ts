@@ -82,7 +82,9 @@ async function showStatus($: EngineInterface) {
   const usage = STATUS_HINTS.map(hint => `/${COMMAND_NAME} ${hint}`).join(', ')
   const state = await readQuizSwitch($)
   const where = state.root === undefined ? '' : state.ownSwitch ? ' in this project' : ' (the default for every project)'
-  return `Comprehension quiz is ${state.enabled ? 'on' : 'off'}${where}. Use ${usage}. Quiz on demand: ${SCOPES_USAGE}.`
+  const { trigger } = await readSettings($)
+  const when = state.enabled ? (trigger === 'important' ? ', for important changes only' : ', after every change') : ''
+  return `Comprehension quiz is ${state.enabled ? 'on' : 'off'}${where}${when}. Use ${usage}. Quiz on demand: ${SCOPES_USAGE}.`
 }
 
 // `/quiz` on its own: the menu, then whatever was picked in it.

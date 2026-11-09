@@ -19,7 +19,12 @@ import {
   questionCountFor,
   questionsForSize,
 } from '../hooks/quiz/questionCount'
-import { HUNT_USE, LENSES, PLAIN_WORDING, QUIZ_GOAL, quizInstructions, requestedQuizNote } from '../hooks/quiz/prompts'
+import { QUIZ_GOAL } from '../hooks/prompts/quiz/goal'
+import { quizInstructions } from '../hooks/prompts/quiz/instructions'
+import { LENSES } from '../hooks/prompts/quiz/lenses'
+import { HUNT_USE } from '../hooks/prompts/quiz/perspective'
+import { PLAIN_WORDING } from '../hooks/prompts/quiz/wording'
+import { requestedQuizNote } from '../hooks/prompts/requestedQuiz'
 import { QuizRequest } from '../hooks/quiz/quizRequest'
 import { QuizRounds } from '../hooks/quiz/quizRounds'
 import { TurnReminders } from '../hooks/quiz/turnReminders'
@@ -77,7 +82,7 @@ test('size mode: 1 question per 100 changed lines, at least 1, never above the m
 })
 
 // Settings as stored by default; tests override what they are about.
-const SETTINGS = { sound: true, maxQuestions: 4, sizing: 'agent', perspective: 'mixed', wording: 'plain' } as const
+const SETTINGS = { trigger: 'important', sound: true, maxQuestions: 4, sizing: 'agent', perspective: 'mixed', wording: 'plain' } as const
 
 test('question count follows the settings, and a quiz round must fit it', async () => {
   const changes = new Map([['/a.ts', 150]])
@@ -163,6 +168,7 @@ test('banner lines: the first line always fits, the file list stays on one row',
 })
 
 test('settings usage lists every setting with its values', async () => {
+  expect(SETTINGS_USAGE).toContain('/quiz settings trigger important|always')
   expect(SETTINGS_USAGE).toContain('/quiz settings sound on|off')
   expect(SETTINGS_USAGE).toContain('/quiz settings max 1-99')
   expect(SETTINGS_USAGE).toContain('/quiz settings length claude|size')
@@ -236,7 +242,15 @@ test('quiz instructions: code and architecture hunt for corner cases before writ
 })
 
 test('settings: ←/→ steps each value, the max within 1-99', async () => {
-  const [sound, max, length] = SETTING_DEFINITIONS
+  const [trigger, sound, max, length] = SETTING_DEFINITIONS
+  expect(trigger!.defaultValue).toBe('important')
+  expect(trigger!.step('important', 1)).toBe('always')
+  expect(trigger!.step('always', -1)).toBe('important')
+  expect(trigger!.parse('every')).toBe('always')
+  expect(trigger!.parse('smart')).toBe('important')
+  expect(trigger!.parse('sometimes')).toBeUndefined()
+  expect(trigger!.fromStore('always')).toBe('always')
+  expect(trigger!.fromStore('never')).toBeUndefined()
   expect(sound!.step(true, 1)).toBe(false)
   expect(max!.step(4, 1)).toBe(5)
   expect(max!.step(1, -1)).toBe(1)

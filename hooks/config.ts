@@ -19,6 +19,11 @@ export const EDIT_TOOLS: ReadonlySet<string> = new Set(['Edit', 'Write', 'Notebo
 export const RESULTS_TOOL_NAME = 'quiz_results'
 export const RESULTS_TOOL = `mcp__${PLUGIN_NAME}__${RESULTS_TOOL_NAME}`
 
+// The tool Claude calls once its edits are done, when quizzes come only for
+// important changes: it says whether this change needs a quiz (triage/).
+export const CHECK_TOOL_NAME = 'quiz_check'
+export const CHECK_TOOL = `mcp__${PLUGIN_NAME}__${CHECK_TOOL_NAME}`
+
 // Keys in the mod's persistent store.
 export const STORE_KEYS = {
   enabled: 'enabled',
@@ -29,6 +34,7 @@ export const STORE_KEYS = {
   sizing: 'sizing',
   perspective: 'perspective',
   wording: 'wording',
+  trigger: 'trigger',
   stats: 'stats',
 } as const
 
@@ -60,7 +66,29 @@ export type Perspective = (typeof PERSPECTIVES)[number]
 export const WORDINGS = ['plain', 'standard'] as const
 export type Wording = (typeof WORDINGS)[number]
 
+// ─── When to quiz ────────────────────────────────────────────────────────────
+
+// `important`: a fast model looks at the change first and the quiz comes only
+// when it has something the user must understand (triage/). `always`: a quiz
+// after every turn that changed code.
+export const TRIGGERS = ['important', 'always'] as const
+export type Trigger = (typeof TRIGGERS)[number]
+
+// The triage call that decides whether a change is important. Kept small: a
+// fast model, low effort, a one-line reply, and a bounded view of the edits.
+export const TRIAGE = {
+  model: 'haiku',
+  effort: 'low',
+  // The reply is one line: "<reason> => QUIZ" or "<reason> => SKIP".
+  maxTokens: 60,
+  timeoutMs: 20_000,
+  // The most characters of edit excerpts sent, and of any one edit.
+  maxChars: 6_000,
+  perEditChars: 1_500,
+} as const
+
 export const DEFAULT_SETTINGS = {
+  trigger: 'important' as Trigger,
   sound: true,
   maxQuestions: QUESTION_LIMITS.perDialog as number,
   sizing: 'agent' as Sizing,

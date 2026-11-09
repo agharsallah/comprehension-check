@@ -1,6 +1,6 @@
 // The settings menu, as /config works: a list of the settings with their
 // values; ↑↓ moves, Enter changes the one picked in place, and the list comes
-// back with the new value until Esc. Sound, Length and Wording switch on
+// back with the new value until Esc. Quiz on, Sound, Length and Wording switch on
 // Enter; Max questions asks for a number; a setting with `choices`
 // (Perspective) lists them to pick from. Each dialog is a plain `$.ui.ask`.
 //

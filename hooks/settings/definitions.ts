@@ -2,10 +2,20 @@
 // words that describe it. The command line, the settings menu and the summary
 // all read this table; adding a setting means adding an entry.
 
-import { DEFAULT_SETTINGS, LINES_PER_QUESTION, PERSPECTIVES, QUESTION_LIMITS, SETTINGS_MENU, STORE_KEYS, WORDINGS } from '../config'
-import type { Perspective, Sizing, Wording } from '../config'
+import {
+  DEFAULT_SETTINGS,
+  LINES_PER_QUESTION,
+  PERSPECTIVES,
+  QUESTION_LIMITS,
+  SETTINGS_MENU,
+  STORE_KEYS,
+  TRIGGERS,
+  WORDINGS,
+} from '../config'
+import type { Perspective, Sizing, Trigger, Wording } from '../config'
 
 export type Settings = {
+  trigger: Trigger
   sound: boolean
   maxQuestions: number
   sizing: Sizing
@@ -54,6 +64,38 @@ const isQuestionCount = (n: unknown): n is number =>
 const clampCount = (n: number) => Math.min(QUESTION_LIMITS.max, Math.max(QUESTION_LIMITS.min, n))
 
 const questions = (n: number) => `${n} question${n === 1 ? '' : 's'}`
+
+const TRIGGER_TEXT: Record<Trigger, { label: string; words: readonly string[]; hint: string; summary: string }> = {
+  important: {
+    label: 'Important changes',
+    words: ['important', 'smart', 'auto', 'risky'],
+    hint: 'A fast model (Haiku) looks at each change first and skips the quiz when nothing in it needs checking.',
+    summary: 'quiz on important changes',
+  },
+  always: {
+    label: 'Every change',
+    words: ['always', 'every', 'each'],
+    hint: 'A quiz after every turn that changed code.',
+    summary: 'quiz on every change',
+  },
+}
+
+const trigger: SettingDefinition<Trigger> = {
+  key: 'trigger',
+  storeKey: STORE_KEYS.trigger,
+  names: ['trigger', 'when'],
+  usage: 'important|always',
+  values: TRIGGERS,
+  title: 'Quiz on',
+  defaultValue: DEFAULT_SETTINGS.trigger,
+  label: value => TRIGGER_TEXT[value].label,
+  hint: value => TRIGGER_TEXT[value].hint,
+  step: value => (value === 'important' ? 'always' : 'important'),
+  parse: word => TRIGGERS.find(t => TRIGGER_TEXT[t].words.includes(word)),
+  fromStore: stored => TRIGGERS.find(t => t === stored),
+  summary: value => TRIGGER_TEXT[value].summary,
+  saved: value => `Quizzes now come on ${TRIGGER_TEXT[value].label.toLowerCase()}. ${TRIGGER_TEXT[value].hint}`,
+}
 
 const sound: SettingDefinition<boolean> = {
   key: 'sound',
@@ -195,6 +237,7 @@ const wording: SettingDefinition<Wording> = {
 const asAny = <V>(def: SettingDefinition<V>) => def as unknown as SettingDefinition
 
 export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
+  asAny(trigger),
   asAny(sound),
   asAny(maxQuestions),
   asAny(sizing),

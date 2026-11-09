@@ -132,6 +132,8 @@ const START = { cwd: '/', surface: 'terminal', isInteractive: true } as const
 
 test('the first edit of a turn leaves Claude a quiz reminder, once', async ($, on) => {
   const { session } = engine(on)
+  await $.session.start(START)
+  await $.command.run({ command: 'quiz', args: 'settings trigger always', ...RUN })
 
   await $.tool.call(EDIT)
   await $.tool.call({ ...EDIT, file_path: '/repo/b.kt' })
@@ -403,6 +405,7 @@ test('/quiz sound still works as before', async ($, on) => {
 test('Claude decides by severity and complexity, up to the max; a longer quiz is sent back', async ($, on) => {
   const { seen, session } = engine(on)
   await $.session.start(START)
+  await $.command.run(settingsCmd('trigger always'))
   await $.command.run(settingsCmd('max 2'))
 
   await $.tool.call({ ...EDIT, file_path: '/repo/max.kt' })
@@ -422,6 +425,7 @@ const linesOf = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}`).
 test('by change size: 1 question per 100 changed lines', async ($, on) => {
   const { seen, session } = engine(on)
   await $.session.start(START)
+  await $.command.run(settingsCmd('trigger always'))
   await $.command.run(settingsCmd('length size'))
 
   await $.tool.call({ tool: 'Write', file_path: '/repo/s1.kt', content: linesOf(100) })
@@ -441,6 +445,7 @@ test('by change size: 1 question per 100 changed lines', async ($, on) => {
 test('plain wording is the default; standard wording leaves its rule out', async ($, on) => {
   const { session } = engine(on)
   await $.session.start(START)
+  await $.command.run(settingsCmd('trigger always'))
 
   await $.tool.call({ ...EDIT, file_path: '/repo/plain.kt' })
   expect(noteTexts(session)[0]).toContain('Wording: plain.')
@@ -455,6 +460,7 @@ test('plain wording is the default; standard wording leaves its rule out', async
 test('the perspective setting picks the lens Claude is told to quiz from', async ($, on) => {
   const { session } = engine(on)
   await $.session.start(START)
+  await $.command.run(settingsCmd('trigger always'))
 
   await $.tool.call({ ...EDIT, file_path: '/repo/mixed.kt' })
   const mixed = noteTexts(session)[0] ?? ''
@@ -494,6 +500,7 @@ const quizOf = (n: number) => ({
 test('a max past 4: the quiz comes in rounds, the user is asked to start once', async ($, on) => {
   const { seen, session } = engine(on)
   await $.session.start(START)
+  await $.command.run(settingsCmd('trigger always'))
   await $.command.run(settingsCmd('max 10'))
 
   await $.tool.call({ ...EDIT, file_path: '/repo/long.kt' })
