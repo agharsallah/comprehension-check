@@ -28,6 +28,7 @@ const engine = (on: On, answers: string[]) => {
   on('process.run', () => ({ value: { exitCode: 128, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }))
   on('command.register', () => ({ value: { command: 'quiz' } }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__comprehension-check__${e.name}` } }))
+  on('agent.register', (_, e) => ({ value: { agent: `comprehension-check:${e.name}` } }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   mock.session(on)
   return asked

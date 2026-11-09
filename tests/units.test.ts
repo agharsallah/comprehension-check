@@ -82,7 +82,15 @@ test('size mode: 1 question per 100 changed lines, at least 1, never above the m
 })
 
 // Settings as stored by default; tests override what they are about.
-const SETTINGS = { trigger: 'important', sound: true, maxQuestions: 4, sizing: 'agent', perspective: 'mixed', wording: 'plain' } as const
+const SETTINGS = {
+  trigger: 'important',
+  sound: true,
+  maxQuestions: 4,
+  sizing: 'agent',
+  perspective: 'mixed',
+  wording: 'plain',
+  quizModel: 'session',
+} as const
 
 test('question count follows the settings, and a quiz round must fit it', async () => {
   const changes = new Map([['/a.ts', 150]])

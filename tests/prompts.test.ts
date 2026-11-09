@@ -8,6 +8,7 @@ import { requestedQuizNote } from '../hooks/prompts/requestedQuiz'
 import { SHARED_SLOTS, fill, listed, numbered, when } from '../hooks/prompts/template'
 import { resultsRefusedReply, scorecardShownReply } from '../hooks/prompts/tools'
 import { changeGrewNote, firstEditNote, importantFirstEditNote, unquizzedStopNote } from '../hooks/prompts/turnNotes'
+import { writerSystem, writerTask } from '../hooks/prompts/writer/writerAgent'
 import type { QuestionCount } from '../hooks/quiz/questionCount'
 import { excerptOf } from '../hooks/triage/excerpts'
 import { triageMessage } from '../hooks/triage/triageMessage'
@@ -80,7 +81,12 @@ const everyPrompt = (): string[] => {
     for (const perspective of PERSPECTIVES) {
       for (const wording of WORDINGS) {
         const style = { perspective, wording }
+        const handOff = { ...style, quizModel: 'haiku' }
         prompts.push(
+          quizInstructions(count, handOff),
+          quizInstructions(count, handOff, { requested: true }),
+          checkQuizReply(count, handOff, 'why'),
+          writerTask('brief', count, style),
           quizInstructions(count, style, { requested: true }),
           firstEditNote(count, style),
           checkQuizReply(count, style, 'why'),
@@ -101,6 +107,7 @@ const everyPrompt = (): string[] => {
     checkNothingReply('no-change'),
     skippedReply,
     resultsRefusedReply,
+    writerSystem(),
     scorecardShownReply(75, 3, 4),
     triageMessage(new Map([['/r/a.ts', 2]]), [{ path: '/r/a.ts', text: '+ a' }], 10),
     excerptOf({ tool: 'Write', content: 'x\n'.repeat(500) }, 100),

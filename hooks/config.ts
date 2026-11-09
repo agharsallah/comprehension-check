@@ -35,6 +35,7 @@ export const STORE_KEYS = {
   perspective: 'perspective',
   wording: 'wording',
   trigger: 'trigger',
+  quizModel: 'quizModel',
   stats: 'stats',
 } as const
 
@@ -87,6 +88,37 @@ export const TRIAGE = {
   perEditChars: 1_500,
 } as const
 
+// ─── Who writes the quiz ─────────────────────────────────────────────────────
+
+// The quizModel value for "Claude writes the quiz in its own turn, on the
+// session's model, with everything it knows about the change". Any other
+// value is a model for the quiz-writer subagent (writer/).
+export const SAME_AS_SESSION = 'session'
+
+// The models offered to write the quiz when Claude Code's settings hold no
+// `availableModels` list: the engine resolves each alias to the latest model
+// of its family, as `--model` does, so no version is named here.
+export const MODEL_ALIASES = ['haiku', 'sonnet', 'opus'] as const
+
+// The subagent that writes the quiz when a model is picked for it. Claude
+// starts it with the Agent tool; the mod sets its model and the quiz
+// settings as it starts (writer/writerAgent.ts).
+export const WRITER = {
+  name: 'quiz-writer',
+  // The effort it thinks at, whatever model it runs on.
+  effort: 'medium',
+  maxTurns: 25,
+  // It reads the change; it never edits.
+  tools: ['Read', 'Grep', 'Glob', 'Bash'],
+  disallowedTools: ['Edit', 'Write', 'NotebookEdit'],
+  // Models listed in the settings menu beside "Same as session": a dialog
+  // holds 4 options; any other model can be typed under Other.
+  menuModels: 3,
+} as const
+
+// The agent type the Agent tool dispatches it by.
+export const WRITER_AGENT = `${PLUGIN_NAME}:${WRITER.name}`
+
 export const DEFAULT_SETTINGS = {
   trigger: 'important' as Trigger,
   sound: true,
@@ -94,6 +126,7 @@ export const DEFAULT_SETTINGS = {
   sizing: 'agent' as Sizing,
   perspective: 'mixed' as Perspective,
   wording: 'plain' as Wording,
+  quizModel: SAME_AS_SESSION as string,
 } as const
 
 // ─── Files that never count as a change ──────────────────────────────────────

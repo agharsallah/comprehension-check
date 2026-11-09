@@ -5,14 +5,18 @@
 import {
   DEFAULT_SETTINGS,
   LINES_PER_QUESTION,
+  MODEL_ALIASES,
   PERSPECTIVES,
   QUESTION_LIMITS,
   SETTINGS_MENU,
   STORE_KEYS,
+  SAME_AS_SESSION,
   TRIGGERS,
   WORDINGS,
+  WRITER,
 } from '../config'
 import type { Perspective, Sizing, Trigger, Wording } from '../config'
+import { isModelName, isTypedModel } from './modelChoices'
 
 export type Settings = {
   trigger: Trigger
@@ -21,6 +25,8 @@ export type Settings = {
   sizing: Sizing
   perspective: Perspective
   wording: Wording
+  // SAME_AS_SESSION, or the model the quiz-writer subagent runs on.
+  quizModel: string
 }
 
 export type SettingValue = Settings[keyof Settings]
@@ -42,6 +48,9 @@ export type SettingDefinition<V = SettingValue> = {
   // Every value, when the menu offers them as a list to pick from. Without
   // it, Enter steps the value on.
   choices?: readonly V[]
+  // Its values are models, which the menu reads when it opens
+  // (modelChoices.ts), as it would `choices`.
+  listsModels?: boolean
   // The value as the menu shows it: "On", "4", "Claude decides".
   label(value: V): string
   // One line under the row that says what the value does.
@@ -234,6 +243,33 @@ const wording: SettingDefinition<Wording> = {
   saved: value => `Quiz wording: ${WORDING_TEXT[value].label}. ${WORDING_TEXT[value].hint}`,
 }
 
+const SESSION_WORDS = [SAME_AS_SESSION, 'same', 'default', 'claude']
+
+const quizModel: SettingDefinition<string> = {
+  key: 'quizModel',
+  storeKey: STORE_KEYS.quizModel,
+  names: ['model', 'writer'],
+  usage: `${SAME_AS_SESSION}|<model>`,
+  values: [SAME_AS_SESSION, ...MODEL_ALIASES],
+  title: 'Quiz model',
+  defaultValue: DEFAULT_SETTINGS.quizModel,
+  listsModels: true,
+  label: value => (value === SAME_AS_SESSION ? 'Same as session' : value),
+  hint: value =>
+    value === SAME_AS_SESSION
+      ? "Claude writes the quiz itself, on the session's model, knowing everything about the change."
+      : `A ${value} subagent writes the quiz at ${WRITER.effort} effort; Claude asks it and grades it.`,
+  step: value => (value === SAME_AS_SESSION ? (MODEL_ALIASES[0] as string) : SAME_AS_SESSION),
+  parse: word => (SESSION_WORDS.includes(word) ? SAME_AS_SESSION : isTypedModel(word) ? word : undefined),
+  fromStore: stored =>
+    stored === SAME_AS_SESSION || (typeof stored === 'string' && isModelName(stored)) ? stored : undefined,
+  summary: value => (value === SAME_AS_SESSION ? "quiz written on the session's model" : `quiz written by ${value}`),
+  saved: value =>
+    value === SAME_AS_SESSION
+      ? "Claude now writes the quiz itself, on the session's model."
+      : `Quizzes are now written by ${value}, in a subagent at ${WRITER.effort} effort; Claude asks them and grades them.`,
+}
+
 const asAny = <V>(def: SettingDefinition<V>) => def as unknown as SettingDefinition
 
 export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
@@ -243,6 +279,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   asAny(sizing),
   asAny(perspective),
   asAny(wording),
+  asAny(quizModel),
 ]
 
 export const findSetting = (name: string) =>

@@ -115,6 +115,7 @@ const engine = (on: On, gateAnswer: string | 'dismiss' = 'Yes, quiz me', opts: E
   })
   on('classic.Stop', () => ({}))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__comprehension-check__${e.name}` } }))
+  on('agent.register', (_, e) => ({ value: { agent: `comprehension-check:${e.name}` } }))
   on('command.register', () => ({ value: { command: 'quiz' } }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   mock.store(on)

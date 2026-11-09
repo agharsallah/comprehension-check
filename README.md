@@ -196,13 +196,14 @@ or type a number. You can also type any command under **Other**, such as `last 5
 | `/quiz` | Open the menu of every command, each with what it does |
 | `/quiz status` | Show whether quizzes are on |
 | `/quiz stats` | Show your record: quizzes, average, best score and streak |
-| `/quiz settings` | Open the settings menu: when to quiz, sound, max questions, length, perspective and wording |
+| `/quiz settings` | Open the settings menu: when to quiz, sound, max questions, length, perspective, wording and the quiz model |
 | `/quiz settings trigger important\|always` | Quiz only on important changes, judged by a fast model (the default), or after every change. `when` works too, as do `every` and `smart`. |
 | `/quiz settings sound on\|off` | Turn the scorecard sounds on (the default) or off. `/quiz sound on\|off` still works. |
 | `/quiz settings max <1-99>` | The most questions a quiz may have (default 4). `questions <n>` still works. |
 | `/quiz settings length claude\|size` | How the number of questions is chosen: Claude decides (the default), or it fits the size of the change. `count agent\|size` still works. |
 | `/quiz settings perspective mixed\|code\|architect\|product` | The angle the questions take (default mixed). `lens` and `view` work too, as do `architecture`, `dev` and `pm`. |
 | `/quiz settings wording plain\|standard` | How the quiz is written (default plain). `words` works too, as do `simple` and `technical`. |
+| `/quiz settings model session\|<model>` | Who writes the quiz: Claude on the session's model (the default), or a subagent on `haiku`, `sonnet`, `opus` or any Claude model id, at medium effort. `writer` works too. See [Choosing the quiz model](#choosing-the-quiz-model). |
 | `/quiz version` | Show the installed version, and whether a newer one is out |
 | `/quiz update` | Update the mod to the latest version, then tell you to run `/reload-plugins` |
 
@@ -221,21 +222,22 @@ including changes made through shell commands, which the automatic quiz misses. 
 ### Settings
 
 `/quiz settings` lists the settings with their current values, as `/config` does. A dialog holds at most 4 options,
-so the list comes in two pages:
+so the list comes in three pages:
 
 ```text
 Enter changes the setting you pick; Esc when done. Length now: Claude weighs how severe and complex the change is.
-❯ 1. Quiz on: Important changes        ❯ 1. Length: Claude decides
-  2. Sound: On                           2. Perspective: Mixed
-  3. Max questions: 4                    3. Wording: Plain
-  4. More settings…                      4. Back
+❯ 1. Quiz on: Important changes      ❯ 1. Length: Claude decides       ❯ 1. Quiz model: Same as session
+  2. Sound: On                         2. Perspective: Mixed             2. Back
+  3. Max questions: 4                  3. Wording: Plain
+  4. More settings…                    4. More settings…
 ```
 
 - **↑ ↓** move, **Enter** changes the setting in place, and the list comes back, on the same page, with the new value.
-- **More settings…** opens the second page; **Back** returns to the first.
+- **More settings…** opens the next page; **Back** returns to the first.
 - **Quiz on**, **Sound**, **Length** and **Wording** switch on Enter.
 - **Max questions** asks for a number: pick 2, 4, 6 or 8, or type any number from 1 to 99 under **Other**.
 - **Perspective** lists Mixed, Code, Architecture and Product, each with what it asks about.
+- **Quiz model** lists Same as session and the models you can pick (see [Choosing the quiz model](#choosing-the-quiz-model)); type any other under **Other**.
 - **Esc** closes it.
 
 Each setting can also be set in one line, as in the table above. Settings persist across sessions.
@@ -248,6 +250,7 @@ Each setting can also be set in one line, as in the table above. Settings persis
 | **Length** | **Claude decides**: Claude weighs how severe and complex the change is and picks how many. **Fits change size**: 1 question per 100 changed lines. Both stay within the max. | Claude decides |
 | **Perspective** | **Mixed**, **Code**, **Architecture**, **Product** (see [Usage](#usage)) | Mixed |
 | **Wording** | **Plain**: short sentences and everyday words. **Standard**: precise technical wording, as dense as the change calls for. | Plain |
+| **Quiz model** | **Same as session**: Claude writes the quiz itself. **A model** (`haiku`, `sonnet`, `opus`, or any model id): a subagent on that model writes it, at medium effort. `/quiz settings model haiku` | Same as session |
 
 With **Fits change size**, 1–100 changed lines get 1 question, 101–200 get 2, and so on, up to your max.
 If you press Esc during a later round of a long quiz, Claude asks no more and grades the rounds you answered.
@@ -275,6 +278,26 @@ With **Quiz on: Important changes** (the default), a quiz comes only when the ch
   costs a fraction of a cent.
 
 To be quizzed after every change, as before this setting existed, run `/quiz settings trigger always`.
+
+### Choosing the quiz model
+
+By default Claude writes the quiz itself, on whatever model the session runs (`/model`), knowing everything about the change:
+what you asked for, what it read and why it chose what it did. **Quiz model** hands the writing to a cheaper or stronger model.
+
+- **Who writes it.** With a model picked, the quiz instructions tell Claude to start the mod's `comprehension-check:quiz-writer`
+  agent with the Agent tool, and to brief it on what changed and on the decisions the diff does not explain. As the agent starts,
+  the mod sets its model to your pick and adds your settings (length, perspective, wording) to the brief, so neither depends on
+  Claude remembering them. The agent reads the change (read only: no edits), and answers with the questions and an answer key.
+- **Who asks and grades.** Claude asks the agent's questions word for word, through the same Yes / Not now gate, and grades your
+  answers against the key. A toast names the model that really runs, as the engine resolved it: `🧠 claude-haiku-5-5 is writing your quiz…`.
+- **Effort.** The writer thinks at medium effort, whatever model it runs on.
+- **Which models are offered.** Claude Code has no call that lists every model. The menu offers the models your admin allowed
+  (`availableModels` in Claude Code's settings) when that list is set, else the aliases `haiku`, `sonnet` and `opus`, which the engine
+  resolves to the latest model of each family. Any other id can be typed (`/quiz settings model claude-opus-5-5`); a name that is
+  neither an alias nor a Claude model id is refused. A model the engine will not run makes the Agent call fail, and Claude then writes
+  the quiz itself.
+- **What it costs.** Claude's own context carries a short hand-off instead of the full quiz rules. The writer is a separate run that
+  reads the change on its own. The writer does not see the conversation, so it knows a decision only when Claude's brief names it.
 
 **Lock files and git-ignored files never count**, in either mode. Edits to them alone do not trigger a quiz. Lock files are
 `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `Cargo.lock`, `go.sum`, `poetry.lock`, `uv.lock` and any `*.lock`.
@@ -305,7 +328,11 @@ The hooks module's entry point is [`hooks/register.tsx`](hooks/register.tsx). It
    (no `turn.complete`), so a detached task submits the short prompt (`Quiz me on the last commit.`) once the hook has returned.
    In the turn that prompt starts, the quiz call skips the yes/no step and is sized on the requested changes. A later turn
    drops the request. If the prompt does not go in, the reason is logged for `claude --debug`.
-8. The on/off switch, the settings (`settings/settings.ts`) and your stats are kept in the mod's persistent store (`$.store`). Animation state is session state (`$.state`, typed in [`types/index.d.ts`](types/index.d.ts)).
+8. **`agent.spawn`** (`writer/writerAgent.ts`): with a **Quiz model** picked, the quiz instructions ask Claude to start the
+   `comprehension-check:quiz-writer` agent, registered at session start (`$.agent.register`, medium effort, read-only tools). The hook
+   sets the agent's model to the pick and appends the user's settings to Claude's brief. **`agent.offer`** keeps the agent out of
+   Claude's listing while quizzes are written on the session's model.
+9. The on/off switch, the settings (`settings/settings.ts`) and your stats are kept in the mod's persistent store (`$.store`). Animation state is session state (`$.state`, typed in [`types/index.d.ts`](types/index.d.ts)).
 
 ### Code layout
 
@@ -314,11 +341,12 @@ The hooks module's entry point is [`hooks/register.tsx`](hooks/register.tsx). It
 | [`hooks/config.ts`](hooks/config.ts) | Every tunable: names, question limits, size steps, lock files, score tiers, timings, update commands |
 | `hooks/register.tsx` | The entry point. It creates the change tracker and other shared parts and registers each feature. |
 | `hooks/quiz/` | When to quiz: edits, reminders to Claude, the Yes / Not now gate, the Stop fallback, the question count, and the quiz the user asked for (`quizRequest.ts`) |
-| `hooks/prompts/` | Every text Claude or the triage model reads, as templates with `{{slots}}` filled by `fill` (`template.ts`). The quiz instructions are in `quiz/`, one file per part: how to ask, the goal, the lenses and perspective, the wording, and the fixed rules. Beside them are the notes left during a turn (`turnNotes.ts`), the check tool's replies (`checkReplies.ts`), the on-demand quiz note (`requestedQuiz.ts`), the replies to a refused quiz call (`quizReplies.ts`), the tool descriptions (`tools.ts`), and the triage prompt (`triage/`) |
+| `hooks/prompts/` | Every text Claude or the triage model reads, as templates with `{{slots}}` filled by `fill` (`template.ts`). The quiz instructions are in `quiz/`, one file per part: how to ask, the goal, the lenses and perspective, the wording, and the fixed rules. Beside them are the notes left during a turn (`turnNotes.ts`), the check tool's replies (`checkReplies.ts`), the on-demand quiz note (`requestedQuiz.ts`), the replies to a refused quiz call (`quizReplies.ts`), the tool descriptions (`tools.ts`), the triage prompt (`triage/`), and the quiz writer's rules and task (`writer/`); `quiz/delegated.ts` is the hand-off Claude gets when another model writes the quiz |
 | `hooks/scopes/` | Quizzes on demand: the scopes (`scopes.ts`), the git output parsers (`gitOutput.ts`), reading a scope from git (`collectScope.ts`), the words for it (`scopeText.ts`) and the command flow (`requestQuiz.ts`) |
 | `hooks/changes/` | What changed: paths and line counts of edits, lock and git-ignored files, and the files owed a quiz |
 | `hooks/triage/` | For quizzes on important changes only: edit excerpts (`excerpts.ts`), the message to the triage model (`triageMessage.ts`) and the reader of its reply (`triageReply.ts`), the model call and its memo (`triage.ts`), and the `quiz_check` tool (`checkTool.ts`) |
-| `hooks/settings/` | The settings, defined once as a table (`definitions.ts`), the store (`settings.ts`) and the settings menu (`settingsMenu.ts`) |
+| `hooks/writer/` | For a **Quiz model** picked: the quiz-writer subagent, registered at session start, and the hooks that set its model and settings as it starts, and keep it out of Claude's listing otherwise (`writerAgent.ts`) |
+| `hooks/settings/` | The settings, defined once as a table (`definitions.ts`), the store (`settings.ts`), the settings menu (`settingsMenu.ts`) and the models offered for **Quiz model** (`modelChoices.ts`) |
 | `hooks/scorecard/` | The results tool, grading, score tiers, stats and the scorecard drawing |
 | `hooks/ui/` | The banners above the question dialogs, and the paged pick-list both menus use (`pickList.ts`, `menuPages.ts`) |
 | `hooks/update/` | `/quiz version` and `/quiz update` |
@@ -454,6 +482,7 @@ Users with auto-update get the new version the next time they start Claude Code.
 - Quizzes on demand need a git repository.
 - Each quiz is an extra exchange with the model, so it uses more tokens. With **Important changes**, each turn that changed code also makes one small call to a fast model.
 - The triage model sees excerpts of the edits, not the whole files, and can misjudge a change. It errs toward a quiz when unsure whether behavior changed.
+- A quiz written by another model (**Quiz model**) does not see the conversation, only Claude's brief and the code. A smaller model also tends to drift from the chosen perspective now and then (see the writer evals).
 - Sounds play only on macOS (`afplay`). Linux and Windows terminals stay silent.
 - The mod stores its changed-file list in memory. If the mod reloads mid-turn, that turn's quiz can be skipped.
 

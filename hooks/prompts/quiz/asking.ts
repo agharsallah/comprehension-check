@@ -30,7 +30,8 @@ const REACHES_THEM_REQUESTED =
 const REACHES_THEM_GATED =
   'The mod first asks the user whether they want the quiz, then shows answering instructions above your questions.'
 
-const howManyQuestions = (count: QuestionCount): string => {
+// "exactly 3 questions (…)", "1 to 4 questions. Weigh …".
+export const howManyQuestions = (count: QuestionCount): string => {
   if (count.mode === 'size') {
     return fill(SIZED_COUNT, {
       questions: questions(count.exact),

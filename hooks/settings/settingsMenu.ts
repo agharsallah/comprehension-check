@@ -2,7 +2,8 @@
 // values; ↑↓ moves, Enter changes the one picked in place, and the list comes
 // back with the new value until Esc. Quiz on, Sound, Length and Wording switch on
 // Enter; Max questions asks for a number; a setting with `choices`
-// (Perspective) lists them to pick from. Each dialog is a plain `$.ui.ask`.
+// (Perspective) or models (Quiz model) lists them to pick from, and
+// any other value can be typed under Other. Each dialog is a plain `$.ui.ask`.
 //
 // A dialog holds at most 4 options, so past 4 settings the list comes in
 // pages (`menuPages`): 3 settings and "More settings…", the last page with
@@ -15,11 +16,11 @@ import { menuPages, pageRow } from '../ui/menuPages'
 import { askOrDismiss } from '../ui/pickList'
 import type { OwnDialogs } from '../quiz/ownDialogs'
 import { SETTING_DEFINITIONS, findSetting } from './definitions'
+import { quizModelChoices } from './modelChoices'
 import type { SettingDefinition, SettingValue, Settings } from './definitions'
 import { SETTINGS_USAGE, readSettings, saveValue, summaryOf } from './settings'
 
-type MenuHost = Pick<EngineInterface, 'store' | 'ui'>
-
+type MenuHost = Pick<EngineInterface, 'store' | 'ui' | 'settings'>
 
 const rowLabel = (def: SettingDefinition, settings: Settings) => `${def.title}: ${def.label(settings[def.key])}`
 
@@ -37,9 +38,9 @@ async function askMax($: MenuHost, def: SettingDefinition, current: number) {
 }
 
 // A setting with a list of values: each one with what it does, the current
-// one marked.
+// one marked. A list read when the menu opens (the models) is read now.
 async function askChoice($: MenuHost, def: SettingDefinition, current: SettingValue) {
-  const choices = def.choices ?? []
+  const choices = def.listsModels === true ? await quizModelChoices($) : (def.choices ?? [])
   const labelOf = (value: SettingValue) =>
     `${def.label(value)}${value === current ? SETTINGS_MENU.currentMark : ''}`
   const question = `${def.title}: now ${def.label(current)}. ${choices.map(v => `${def.label(v)}: ${def.hint(v)}`).join(' ')}`
@@ -76,7 +77,7 @@ export async function openSettingsMenu($: MenuHost, ownDialogs: OwnDialogs): Pro
       const next =
         def.key === 'maxQuestions'
           ? await askMax($, def, current as number)
-          : def.choices !== undefined
+          : def.choices !== undefined || def.listsModels === true
             ? await askChoice($, def, current)
             : def.step(current, 1)
       if (next !== undefined && next !== current) {

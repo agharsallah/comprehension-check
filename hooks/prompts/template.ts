@@ -7,7 +7,16 @@
 // quiz limits) fill themselves: a template writes {{quizTool}} and the
 // caller passes nothing for it.
 
-import { CHECK_TOOL, LINES_PER_QUESTION, QUESTION_LIMITS, QUIZ_SOURCE, QUIZ_TOOL, RESULTS_TOOL, RESULTS_TOOL_NAME } from '../config'
+import {
+  CHECK_TOOL,
+  LINES_PER_QUESTION,
+  QUESTION_LIMITS,
+  QUIZ_SOURCE,
+  QUIZ_TOOL,
+  RESULTS_TOOL,
+  RESULTS_TOOL_NAME,
+  WRITER_AGENT,
+} from '../config'
 
 // What every template may use without being given it.
 export const SHARED_SLOTS = {
@@ -17,6 +26,7 @@ export const SHARED_SLOTS = {
   resultsTool: RESULTS_TOOL,
   resultsToolName: RESULTS_TOOL_NAME,
   checkTool: CHECK_TOOL,
+  writerAgent: WRITER_AGENT,
   perDialog: QUESTION_LIMITS.perDialog,
   linesPerQuestion: LINES_PER_QUESTION,
 } as const

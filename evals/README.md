@@ -29,6 +29,7 @@ Results and an HTML report go to `evals/results/` (git-ignored).
 | `retry-backoff` | End to end, live prompt | Claude makes a real change. Under the default setting it calls the check tool once, the triage model asks for a quiz, and the quiz Claude writes (default **mixed** perspective, **plain** wording) is grounded in the change, makes the user reason, asks about a decision Claude made on its own, mixes formats, gives nothing away and reads easily. |
 | `triage-e2e-docs` | End to end, live prompt | Claude writes a docs-only file. It calls the check tool once, the triage model says no quiz, and none is asked. |
 | `triage-quiz-*`, `triage-skip-*` | Generated prompt, triage model | The triage prompt on its own model (`haiku`, `model:` in the case), shown a change exactly as the mod would send it. See [Triage cases](#triage-cases). |
+| `writer-code`, `writer-architecture` | Generated prompt, writer model | The quiz writer (**Quiz model**) on `haiku`, with its own system prompt and the task the mod builds as it starts it: Claude's brief on the price-cache change, then the user's settings. See [Writer cases](#writer-cases). |
 | `no-change-no-quiz` | End to end | A turn that edits nothing gets no quiz. |
 | `lens-code`, `lens-architecture`, `lens-product` | Generated prompt | The same price-cache change under each perspective. The quiz keeps to the lens and stays grounded and critical. The change is chosen to read differently through each lens: a TTL boundary and an untested expiry (code), a per-instance cache with no invalidation (architecture), shoppers charged a stale price at checkout (product). |
 | `grading` | Generated prompt | Claude grades fixed answers fairly: reasoning over wording, partial credit, a right pick with a wrong stated reason. It reports the grades through the scorecard tool and does not repeat them as text. |
@@ -125,13 +126,53 @@ The eval runs the model inside Claude Code, with its system prompt ahead of the 
 If you change the triage prompt, re-run `--tag triage` and read the reasons, not only the verdicts: a reason that names the wrong
 thing means the model judged the wrong thing, even when the verdict happens to be right.
 
+## Writer cases
+
+With a **Quiz model** picked, a subagent on that model writes the quiz (`hooks/prompts/writer/`) and Claude asks it. Each
+`writer-*` case runs the writer on `haiku`, the cheapest model a user might pick and so the hardest test, on the same price-cache
+change as the lens cases. Its system prompt is the writer's own, and its message is what the mod hands it: a brief like the one
+Claude writes (what changed, with the diff inline, and the decisions behind it), then the user's settings, built by `writerTask`.
+
+The graders are the lens cases' quality graders, read against the writer's `questions`, plus three of its own: `json-object` (the
+whole reply is one JSON object with `answer_key` and `questions`), `answer-key` (one entry per question, with the same header,
+naming the right option, right for the code, explained in a line) and `options-argue-for-themselves` (no wrong option's description
+says why it is wrong, a give-away the general `fair-options` grader let through).
+
+### Calibrating the writer prompt
+
+3 runs per case, `haiku`, about $0.20 for the whole `writer` tag:
+
+| Prompt | writer-code | writer-architecture | Notes |
+| --- | --- | --- | --- |
+| `questions`, then `answer_key` | 0.91 | 0.67 | One code run left out `answer_key`. Every architecture run kept one line-level question ("what does checkout charge at 10:02?"). The answer-key grader also failed questions left incomplete on purpose for a free-text answer. |
+| `answer_key` first ("settle what is right before you write the options that hide it"); the grader takes a free-text answer | 0.98 | 0.91 | Every reply was one JSON object with both arrays; the lens held in all three architecture runs. |
+| Same prompt, `options-argue-for-themselves` grader added | 0.93 | 0.80 | The new grader failed 3 of 6 runs: wrong options such as "Throws an error: no check runs, so nothing is thrown". Live runs showed the same. |
+| Each option's description argues for its label; a deliberate free-text question is marked `free_text` in the key | 0.97 | 1.00 | `options-argue-for-themselves` passed 5 of 6. |
+
+### Live runs
+
+Two end-to-end runs in Claude Code (`claude -p` with the mod loaded, **Quiz model** set to `haiku`, the session on its own model):
+a retry-with-backoff change and a discount-code change, each run twice. Each run checked that the writer ran on `claude-haiku-5-5`,
+that the mod's settings reached its brief, that its reply parsed with `answer_key` first and one entry per question, that Claude
+passed its questions to the quiz word for word, and that every key answer was right for the code Claude wrote.
+
+- **First pass.** Every check held, but in the discount run Claude took a question the writer left free-text on purpose (no right
+  option) for a mistake and sent it back to the writer with `SendMessage`; the writer, resumed on `haiku`, added the option. Wrong
+  options also argued against themselves. Both led to the prompt fixes in the last row above.
+- **Second pass.** Every check held in both runs, with no round trip; each free-text question was marked and asked as written. The
+  quizzes found real problems in the code Claude had just written: a POST retried after a 500 can place an order three times, waits
+  past the timer limit (from the 27th try) fire at once, an unpadded expiry date ("2026-11-9") never expires, and an expired code
+  with a bad percentage is never checked. A few questions still took a line-level angle under the architecture perspective.
+
+An eval case cannot set the mod's store, so this path has no `claude plugin eval` case of its own.
+
 ## Why some prompts are generated
 
 Eval runs are headless. `AskUserQuestion` does not exist there, so a quiz can never be asked for real.
 Every case adds a system-prompt note that tells Claude to print the `AskUserQuestion` input it would send as a JSON block, and the graders read that.
 
 - **End-to-end cases** get the real instructions from the mod itself, so they always test the shipped prompt. They run with the default settings (an eval run starts with an empty store), so they cover the **mixed** perspective.
-- **Generated cases** need a perspective other than the default, or a quiz already answered, or (triage) the triage prompt on its own model. Their `prompt.md` embeds the text from `hooks/prompts/`, written by `scripts/build-evals.ts`. Regenerate them after any change to either prompt:
+- **Generated cases** need a perspective other than the default, or a quiz already answered, or (triage, writer) a prompt on its own model. Their `prompt.md` embeds the text from `hooks/prompts/`, written by `scripts/build-evals.ts`. Regenerate them after any change to either prompt:
 
 ```
 bun scripts/build-evals.ts          # rewrite evals/<case>/prompt.md

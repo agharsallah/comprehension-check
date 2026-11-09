@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Quiz model: pick the model that writes your quizzes.** By default Claude still writes the quiz itself, on the session's model. With a model picked (`/quiz settings model haiku`, or **Quiz model** in the settings menu), Claude hands the writing to a new `comprehension-check:quiz-writer` subagent, then asks its questions word for word and grades them against its answer key. The mod sets the subagent's model and adds your settings (length, perspective, wording) as it starts, so they never depend on Claude; it thinks at medium effort, reads only, and a toast names the model that really runs. The menu offers the models your admin allowed (`availableModels` in Claude Code's settings) when that list is set, else the `haiku`, `sonnet` and `opus` aliases; any Claude model id can be typed.
+- **Evals for the quiz writer**: `writer-code` and `writer-architecture` run the writer on `haiku` (0.97 and 1.00), with graders for its JSON reply, its answer key and options that never argue against themselves. Two live end-to-end runs in Claude Code confirmed the whole path.
+
 ## [0.11.0] - 2026-11-09
 
 ### Added
