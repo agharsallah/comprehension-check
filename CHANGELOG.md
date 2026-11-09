@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-09
+
 ### Added
 
 - **Quiz model: pick the model that writes your quizzes.** By default Claude still writes the quiz itself, on the session's model. With a model picked (`/quiz settings model haiku`, or **Quiz model** in the settings menu), Claude hands the writing to a new `comprehension-check:quiz-writer` subagent, then asks its questions word for word and grades them against its answer key. The mod sets the subagent's model and adds your settings (length, perspective, wording) as it starts, so they never depend on Claude; it thinks at medium effort, reads only, and a toast names the model that really runs. The menu offers the models your admin allowed (`availableModels` in Claude Code's settings) when that list is set, else the `haiku`, `sonnet` and `opus` aliases; any Claude model id can be typed.
@@ -138,7 +140,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mid-turn reminder plus a `Stop` hook fallback, so the quiz is asked once per turn.
 - `/quiz on|off|status`; the on/off setting persists across sessions.
 
-[Unreleased]: https://github.com/agharsallah/comprehension-check/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/agharsallah/comprehension-check/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/agharsallah/comprehension-check/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/agharsallah/comprehension-check/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/agharsallah/comprehension-check/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/agharsallah/comprehension-check/compare/v0.8.0...v0.9.0
