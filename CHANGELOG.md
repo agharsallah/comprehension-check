@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-09
+
 ### Changed
 
 - **`/quiz on` and `/quiz off` now apply to this project only** (the git repository you are in), and persist across sessions. `/quiz on all` / `/quiz off all` switch every project and clear each project's own switch. Outside a repository, `/quiz on|off` acts like `all`.
@@ -117,7 +119,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mid-turn reminder plus a `Stop` hook fallback, so the quiz is asked once per turn.
 - `/quiz on|off|status`; the on/off setting persists across sessions.
 
-[Unreleased]: https://github.com/agharsallah/comprehension-check/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/agharsallah/comprehension-check/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/agharsallah/comprehension-check/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/agharsallah/comprehension-check/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/agharsallah/comprehension-check/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/agharsallah/comprehension-check/compare/v0.6.0...v0.7.0
