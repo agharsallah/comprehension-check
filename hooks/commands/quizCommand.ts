@@ -11,7 +11,15 @@ import type { CommandRunResult, EngineInterface, On } from 'claude-code'
 import { COMMAND_NAME, PLUGIN_NAME } from '../config'
 import type { ChangeTracker } from '../changes/changeTracker'
 import { readStats, statsLine } from '../scorecard/stats'
-import { SETTINGS_USAGE, isQuizEnabled, readSettings, saveSettingFromWords, setQuizEnabled } from '../settings/settings'
+import {
+  SETTINGS_USAGE,
+  isQuizEnabled,
+  readQuizSwitch,
+  readSettings,
+  saveSettingFromWords,
+  setProjectQuizEnabled,
+  setQuizEnabled,
+} from '../settings/settings'
 import type { OwnDialogs } from '../quiz/ownDialogs'
 import type { QuizRequest } from '../quiz/quizRequest'
 import { requestQuiz } from '../scopes/requestQuiz'
@@ -24,7 +32,7 @@ import { SUBCOMMAND_NAMES } from './subcommands'
 export type QuizCommandDeps = { changes: ChangeTracker; ownDialogs: OwnDialogs; request: QuizRequest }
 
 // Shown in the status reply.
-const STATUS_HINTS = ['on|off', 'stats', 'settings', 'version', 'update'] as const
+const STATUS_HINTS = ['on|off [all]', 'stats', 'settings', 'version', 'update'] as const
 
 export async function defineQuizCommand($: EngineInterface) {
   await $.command.register({
@@ -35,10 +43,16 @@ export async function defineQuizCommand($: EngineInterface) {
   })
 }
 
-async function switchQuiz($: EngineInterface, isOn: boolean, changes: ChangeTracker) {
-  await setQuizEnabled($, isOn)
+// `/quiz on|off`: this project. `/quiz on|off all`: every project.
+async function switchQuiz($: EngineInterface, isOn: boolean, [scope = '']: string[], changes: ChangeTracker) {
+  const word = isOn ? 'enabled' : 'disabled'
+  if (scope !== '' && scope !== 'all') return `Unknown: ${isOn ? 'on' : 'off'} ${scope}. Use /${COMMAND_NAME} ${isOn ? 'on' : 'off'} [all].`
+  // Outside a git repository there is no project, so the switch is global.
+  const root = scope === 'all' ? undefined : await setProjectQuizEnabled($, isOn)
+  if (root === undefined) await setQuizEnabled($, isOn)
   if (!isOn) changes.forget()
-  return `Comprehension quiz ${isOn ? 'enabled' : 'disabled'}.`
+  if (root !== undefined) return `Comprehension quiz ${word} in ${root}. Other projects are unchanged.`
+  return `Comprehension quiz ${word} in every project.${scope === 'all' ? '' : ' (Not in a git repository, so the switch is global.)'}`
 }
 
 async function changeSettings($: EngineInterface, [name = '', value = '']: string[], ownDialogs: OwnDialogs) {
@@ -66,7 +80,9 @@ async function updateSelf($: EngineInterface) {
 
 async function showStatus($: EngineInterface) {
   const usage = STATUS_HINTS.map(hint => `/${COMMAND_NAME} ${hint}`).join(', ')
-  return `Comprehension quiz is ${(await isQuizEnabled($)) ? 'on' : 'off'}. Use ${usage}. Quiz on demand: ${SCOPES_USAGE}.`
+  const state = await readQuizSwitch($)
+  const where = state.root === undefined ? '' : state.ownSwitch ? ' in this project' : ' (the default for every project)'
+  return `Comprehension quiz is ${state.enabled ? 'on' : 'off'}${where}. Use ${usage}. Quiz on demand: ${SCOPES_USAGE}.`
 }
 
 // `/quiz` on its own: the menu, then whatever was picked in it.
@@ -88,9 +104,9 @@ async function runCommand($: EngineInterface, args: string, deps: QuizCommandDep
 async function runSubcommand($: EngineInterface, name: string, words: string[], deps: QuizCommandDeps) {
   switch (name) {
     case 'on':
-      return switchQuiz($, true, deps.changes)
+      return switchQuiz($, true, words, deps.changes)
     case 'off':
-      return switchQuiz($, false, deps.changes)
+      return switchQuiz($, false, words, deps.changes)
     case 'settings':
       return changeSettings($, words, deps.ownDialogs)
     case 'sound':

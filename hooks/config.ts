@@ -22,6 +22,8 @@ export const RESULTS_TOOL = `mcp__${PLUGIN_NAME}__${RESULTS_TOOL_NAME}`
 // Keys in the mod's persistent store.
 export const STORE_KEYS = {
   enabled: 'enabled',
+  // The on/off switch of each project that has its own, by git top level.
+  enabledProjects: 'enabledProjects',
   sound: 'sound',
   maxQuestions: 'maxQuestions',
   sizing: 'sizing',

@@ -186,8 +186,9 @@ or type a number. You can also type any command under **Other**, such as `last 5
 | `/quiz last [n]` | Quiz you now on the last commit, or the last `n` commits (1–100) |
 | `/quiz uncommitted` | Quiz you now on your uncommitted changes: staged, unstaged and new files. `changes`, `diff` and `wip` work too. |
 | `/quiz codebase` | Quiz you now on the whole codebase as it stands. `all`, `repo` and `project` work too. |
-| `/quiz on` | Turn quizzes on (the default) |
-| `/quiz off` | Turn the automatic quizzes after Claude's edits off. The quizzes you ask for still run. The setting persists across sessions. |
+| `/quiz on` | Turn quizzes on in this project (the git repository you are in). Outside a repository it acts like `/quiz on all`. |
+| `/quiz off` | Turn the automatic quizzes after Claude's edits off in this project only. The quizzes you ask for still run. The setting persists across sessions. |
+| `/quiz on all` / `/quiz off all` | Turn the automatic quizzes on or off in every project. This clears each project's own switch. On is the default. |
 | `/quiz` | Open the menu of every command, each with what it does |
 | `/quiz status` | Show whether quizzes are on |
 | `/quiz stats` | Show your record: quizzes, average, best score and streak |

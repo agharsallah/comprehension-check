@@ -17,8 +17,8 @@ export const SUBCOMMAND_HELP: readonly SubcommandHelp[] = [
   { name: 'settings', args: '[setting value]', summary: 'Open the settings menu, or set one setting' },
   { name: 'stats', args: '', summary: 'Your record: quizzes, average, best score, streak' },
   { name: 'status', args: '', summary: 'Whether the automatic quizzes are on' },
-  { name: 'on', args: '', summary: 'Turn the automatic quizzes after edits on' },
-  { name: 'off', args: '', summary: 'Turn the automatic quizzes after edits off' },
+  { name: 'on', args: '[all]', summary: 'Turn quizzes after edits on here, or everywhere with all' },
+  { name: 'off', args: '[all]', summary: 'Turn quizzes after edits off here, or everywhere with all' },
   { name: 'version', args: '', summary: 'The installed version, and whether a newer one is out' },
   { name: 'update', args: '', summary: 'Update the mod to the latest version' },
 ]

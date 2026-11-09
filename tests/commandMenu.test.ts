@@ -40,7 +40,7 @@ const labels = (a: Asked | undefined) => a?.options.map(o => o.split(' — ')[0]
 const row = (name: string, what: string) => `${name} — ${what}`
 const STATS = row('stats', 'Your record: quizzes, average, best score, streak')
 const LAST = row('last', 'Quiz on the last commit, or the last n (1-100)')
-const OFF = row('off', 'Turn the automatic quizzes after edits off')
+const OFF = row('off', 'Turn quizzes after edits off here, or everywhere with all')
 
 test('/quiz opens a menu: the quizzes on demand first, each with what it does', async ($, on) => {
   const asked = engine(on, [])
@@ -98,7 +98,7 @@ test('the switch offers whichever way would change the automatic quizzes', async
   const asked = engine(on, ['More commands…', OFF, 'More commands…'])
   await $.session.start(START)
 
-  expect((await $.command.run(quiz())).text).toBe('Comprehension quiz disabled.')
+  expect((await $.command.run(quiz())).text).toContain('Comprehension quiz disabled')
   await $.command.run(quiz())
   expect(asked[2]?.question).toContain('are off')
   expect(labels(asked[3])).toContain('on')

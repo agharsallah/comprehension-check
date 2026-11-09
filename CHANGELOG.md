@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **`/quiz on` and `/quiz off` now apply to this project only** (the git repository you are in), and persist across sessions. `/quiz on all` / `/quiz off all` switch every project and clear each project's own switch. Outside a repository, `/quiz on|off` acts like `all`.
+
 ## [0.9.0] - 2026-11-06
 
 ### Added

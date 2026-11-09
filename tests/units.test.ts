@@ -7,6 +7,7 @@ import { ChangeTracker, totalLines } from '../hooks/changes/changeTracker'
 import { commitCountChoices, menuChoices } from '../hooks/commands/commandMenu'
 import { argsBefore, quizCompletions } from '../hooks/commands/completions'
 import { SUBCOMMAND_HELP } from '../hooks/commands/subcommands'
+import { projectSwitchesFrom, resolveEnabled } from '../hooks/settings/settings'
 import { editedPath, linesChangedBy } from '../hooks/changes/edits'
 import { isLockFile } from '../hooks/changes/ignoredFiles'
 import { isNewerVersion, versionInManifest } from '../hooks/lib/semver'
@@ -546,4 +547,23 @@ test('stats: a trend line of recent scores once there are two', async () => {
   expect(statsLine({ ...base, recent: [38] })).not.toContain('last')
   // Cards drawn before the trend existed have none.
   expect(statsLine(base)).toBe('3 quizzes · average 42% · best 63% · streak 0 (80%+ in a row)')
+})
+
+// ─── On and off, per project ────────────────────────────────────────────────
+
+test('a project with its own switch ignores the global one', () => {
+  const projects = { '/a': false, '/b': true }
+  expect(resolveEnabled(true, projects, '/a')).toBe(false)
+  expect(resolveEnabled(false, projects, '/b')).toBe(true)
+})
+
+test('a project without a switch, or no project at all, follows the global one', () => {
+  expect(resolveEnabled(false, { '/a': true }, '/c')).toBe(false)
+  expect(resolveEnabled(true, { '/a': false }, undefined)).toBe(true)
+})
+
+test('a damaged store of project switches reads as none', () => {
+  expect(projectSwitchesFrom(undefined)).toEqual({})
+  expect(projectSwitchesFrom(['/a'])).toEqual({})
+  expect(projectSwitchesFrom({ '/a': false, '/b': 'yes' })).toEqual({ '/a': false })
 })

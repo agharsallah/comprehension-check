@@ -70,7 +70,7 @@ type EngineOptions = {
   claude?: (argv: readonly string[]) => { exitCode: number; stdout: string; stderr: string } | 'cannot start'
   // Answers git commands other than check-ignore (for /quiz last and the like),
   // given the arguments after `git -c core.quotePath=false`.
-  git?: (args: readonly string[]) => { exitCode: number; stdout: string }
+  git?: (args: readonly string[]) => { exitCode: number; stdout: string } | undefined
   // A reason to refuse every submitted prompt.
   dropPrompts?: string
 }
@@ -823,4 +823,28 @@ test('the /quiz autocomplete adds its rows after the engine\'s, and only for /qu
 
   const other = await autocomplete($, 'fix the bug')
   expect(other.suggestions.map(row => row.text)).toEqual(['/quizzical'])
+})
+
+test('/quiz off turns quizzes off in this project only; off all reaches every project', async ($, on) => {
+  let root = '/repo-a'
+  const toplevel = (args: readonly string[]) =>
+    args[0] === 'rev-parse' && args[1] === '--show-toplevel' ? { exitCode: 0, stdout: `${root}\n` } : undefined
+  const { session } = engine(on, undefined, { git: toplevel })
+  await $.session.start(START)
+
+  expect((await $.command.run({ command: 'quiz', args: 'off', ...RUN })).text).toContain('disabled in /repo-a')
+  await $.tool.call(EDIT)
+  expect((await $.classic.Stop({ stop_hook_active: false })).block).toBeUndefined()
+  expect(noteTexts(session).length).toBe(0)
+
+  // Another project still follows the global switch, which is on.
+  root = '/repo-b'
+  expect((await $.command.run({ command: 'quiz', args: 'status', ...RUN })).text).toContain('is on (the default')
+  await $.tool.call(EDIT)
+  expect((await $.classic.Stop({ stop_hook_active: false })).block).toBeDefined()
+
+  // `off all` clears each project's own switch and turns the default off.
+  await $.command.run({ command: 'quiz', args: 'on', ...RUN })
+  await $.command.run({ command: 'quiz', args: 'off all', ...RUN })
+  expect((await $.command.run({ command: 'quiz', args: 'status', ...RUN })).text).toContain('is off (the default')
 })
