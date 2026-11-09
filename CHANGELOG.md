@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-09
+
 ### Added
 
 - **Quizzes on important changes only, on by default.** A new setting, **Quiz on**: `Important changes` (the default) or `Every change`. With important changes, a fast model (Haiku, low effort, a one-line reply) looks at each change first: the files with their line counts and a short excerpt of each edit. A typo fix, a docs page, a rename or a version bump passes with a toast saying why; a changed condition, retry loop, cache, migration or permission check gets the quiz, and the gate says what makes it worth one. Size is not importance: a one-character change to an auth check gets a quiz, a long docs page does not. When the model cannot answer, the change gets the quiz. `/quiz settings trigger important|always` (also `when`).
@@ -131,7 +133,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mid-turn reminder plus a `Stop` hook fallback, so the quiz is asked once per turn.
 - `/quiz on|off|status`; the on/off setting persists across sessions.
 
-[Unreleased]: https://github.com/agharsallah/comprehension-check/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/agharsallah/comprehension-check/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/agharsallah/comprehension-check/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/agharsallah/comprehension-check/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/agharsallah/comprehension-check/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/agharsallah/comprehension-check/compare/v0.7.0...v0.8.0
